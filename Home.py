@@ -59,7 +59,7 @@ def rating_display(rating):
 def review(site, rating, date, title, author, content):
     container = st.container(border=True)
     with container:
-        c1,c2,c3 = st.columns([0.02,0.3,0.045])
+        c1,c2,c3 = st.columns([0.02,0.3,0.055])
         with c1:
             if site == 'Google':
                 st.image('Google G Icon.png')
