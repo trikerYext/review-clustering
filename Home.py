@@ -3,7 +3,7 @@ import pandas as pd
 import snowflake.connector
 import openai
 
-CLUSTER_COUNT = 15
+DEFAULT_CLUSTER_COUNT = 20
 
 ##################### Snowflake #####################
 #@st.cache_resource
@@ -32,6 +32,9 @@ if 'selected_cluster_id' not in st.session_state:
 
 if 'business_id' not in st.session_state:
     st.session_state.business_id = None
+    
+if 'theme_count' not in st.session_state:
+    st.session_state.theme_count = DEFAULT_CLUSTER_COUNT
 
 st.markdown("""
 <style>.element-container:has(#button-after) + div button {
@@ -67,6 +70,11 @@ def update_business_id(name_to_id):
     selected_id = name_to_id[selected_name]
     st.session_state.business_id = selected_id
     st.experimental_rerun()
+
+def update_theme_count(selected_count):
+    st.session_state.theme_count = selected_count
+    st.experimental_rerun()
+
 
 
 def hero_number(label, value):
@@ -143,13 +151,21 @@ with st.sidebar:
     name_to_id = dict(zip(business_df['NAME'], business_df['BUSINESS_ID']))
     selected_name = st.selectbox('Customer:', business_df['NAME'], key='selected_business_id')
 
+    # Number of themes option
+    # theme_options = [15, 20, 25]
+    # selected_theme_count = st.selectbox('Number of Themes:', theme_options, key='selected_theme_count')
+
     if st.button('Run Report'):
         update_business_id(name_to_id)
+        #st.write(selected_theme_count)
+
 
 
 def main():
-    if st.session_state.business_id:
 
+
+    if st.session_state.business_id:
+        cluster_count = DEFAULT_CLUSTER_COUNT
         st.title("Review Themes 💡")
     
     ## Write Sidebar component here
@@ -173,16 +189,14 @@ def main():
         grouped.columns = ['NUM_REVIEWS', 'AVERAGE_RATING']
         grouped = grouped.reset_index()
         
-        # Sort clusters by the number of reviews and select the top [CLUSTER_COUNT] clusters
-        CLUSTER_COUNT = 15
-        top_clusters = grouped.sort_values(by='NUM_REVIEWS', ascending=False).head(CLUSTER_COUNT)
+        top_clusters = grouped.sort_values(by='NUM_REVIEWS', ascending=False).head(int(cluster_count))
 
 
         # Calculate total review count and weighted average rating for the top clusters
         total_reviews = top_clusters['NUM_REVIEWS'].sum()
         weighted_average_rating = (top_clusters['NUM_REVIEWS'] * top_clusters['AVERAGE_RATING']).sum() / total_reviews
 
-        hero_numbers(CLUSTER_COUNT, total_reviews, round(weighted_average_rating, 2))
+        hero_numbers(cluster_count, total_reviews, round(weighted_average_rating, 2))
 
 
         # Create two columns for clusters and reviews
