@@ -184,23 +184,25 @@ def main():
 
         hero_numbers(CLUSTER_COUNT, total_reviews, round(weighted_average_rating, 2))
 
-        control_bar = st.container(border=True)
-        with control_bar:
-            sort_options = {
-                'Low to High': 'AVERAGE_RATING',
-                'High to Low': '-AVERAGE_RATING'
-            }
-            selected_sort = st.selectbox('Sort by average rating:', list(sort_options.keys()), key='sort_by')
-
-        # Sort the top clusters based on the selected sorting option
-        ascending = True if selected_sort == 'Low to High' else False
-        sorted_df = top_clusters.sort_values(by='AVERAGE_RATING', ascending=ascending)
 
         # Create two columns for clusters and reviews
         col1, col2 = st.columns([0.4, 0.6])
 
         with col1:
             st.write("### Themes")
+            control_bar = st.container()
+            with control_bar:
+                sort_options = {
+                    'Number of Reviews (High to Low)': ('NUM_REVIEWS', False),
+                    'Average Rating (High to Low)': ('AVERAGE_RATING', False),
+                    'Average Rating (Low to High)': ('AVERAGE_RATING', True)
+                }
+                
+                selected_sort = st.selectbox('Sort by:', list(sort_options.keys()), key='sort_by')
+                sort_column, ascending = sort_options[selected_sort]
+
+                # Sort the top clusters based on the selected sorting option
+                sorted_df = top_clusters.sort_values(by=sort_column, ascending=ascending)
             for _, row in sorted_df.iterrows():
                 container = st.container(border=True)
                 with container:
