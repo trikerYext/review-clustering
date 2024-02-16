@@ -85,9 +85,9 @@ def hero_number(label, value):
 def hero_numbers(cluster_count, review_count, average_rating):
     hero_container = st.container(border=True)
     with hero_container:
-        st.write(
-            "Common themes from your most recent reviews")
-        st.caption("Last Generated: Feb 12th, 2024, 9:00 AM EST")
+        # st.write(
+        #     "Common themes from your most recent reviews")
+        # st.caption("Last Generated: Feb 12th, 2024, 9:00 AM EST")
         c1, c2, c3 = st.columns(3)
     with c1: 
         hero_number (label='💡 Themes', value = cluster_count)
