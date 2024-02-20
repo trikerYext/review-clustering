@@ -115,7 +115,7 @@ def rating_display(rating):
         return '⭐⭐⭐⭐⭐'
 
 
-def review(publisher_id, rating, date, title, author, content, content_segment):
+def review(publisher_id, rating, title, author, content, content_segments, date):
     container = st.container(border=True)
     with container:
         c1, c2, c3 = st.columns([0.02, 0.3, 0.055])
@@ -128,13 +128,45 @@ def review(publisher_id, rating, date, title, author, content, content_segment):
             st.text(rating_display(rating))
         with c3:
             st.write(f'*{date}*')
-        st.write(f'###### {title}')
+        
+        if title is None:
+            st.write(f'###### (No Title)')
+        else:
+            st.write(f'###### {title}')
         st.write(f'*{author}*')
 
-        highlighted_content = content.replace(content_segment, f'<mark>{content_segment}</mark>')
+        highlighted_content = content
+        for segment in content_segments:
+            highlighted_content = highlighted_content.replace(segment, f'<mark>{segment}</mark>')
         st.markdown(f'{highlighted_content}', unsafe_allow_html=True)
 
-       # st.write(f"📍 {entity_name}")
+def display_reviews_for_cluster(cluster_df, cluster_id):
+    filtered_reviews = cluster_df[cluster_df['CLUSTER_ID'] == cluster_id]
+    if not filtered_reviews.empty:
+        # Group by REVIEW_ID and collect unique CONTENT_SEGMENTS for each review
+        review_groups = filtered_reviews.groupby('REVIEW_ID').agg({
+            'REVIEW_SEGMENT': lambda x: list(set(x)),
+            'PUBLISHER_ID': 'first',
+            'RATING': 'first',
+            'TITLE': 'first',
+            'AUTHOR_NAME': 'first',
+            'CONTENT': 'first',
+            'PUBLISHER_TIMESTAMP': 'first'
+        }).reset_index()
+
+        # Display each review with all content segments highlighted
+        for _, row in review_groups.iterrows():
+            review(
+                publisher_id=row['PUBLISHER_ID'],
+                rating=row['RATING'],
+                title=row['TITLE'],
+                author=row['AUTHOR_NAME'],
+                content=row['CONTENT'],
+                content_segments=row['REVIEW_SEGMENT'],
+                date=str(row['PUBLISHER_TIMESTAMP'])[0:10]
+            )
+    else:
+        st.write("Select a Theme to see reviews")
 
 with st.sidebar:
     conn = init_connection()
@@ -173,7 +205,7 @@ def main():
         # Code to re-run using the new business_id value
         conn = init_connection()
         cluster_snowflake_query = f'''
-            select distinct CLUSTER_ID, CLUSTER_SUMMARY, REVIEW_SEGMENT, r.title, r.rating::FLOAT as "RATING", r.content, r.author_name, r.publisher_id, r.entity_id, r.publisher_timestamp
+            select distinct CLUSTER_ID, CLUSTER_SUMMARY, REVIEW_SEGMENT, r.REVIEW_ID, r.title, r.rating::FLOAT as "RATING", r.content, r.author_name, r.publisher_id, r.entity_id, r.publisher_timestamp
             from TEAM_DATA_SCIENCE.PUBLIC.CLUSTER_RUNS_REVIEWS cr
             join PROD_LISTINGS_LOCAL.REVIEWS.ENTITY_REVIEWS r on cr.review_id = r.review_id
             where cr.BUSINESS_ID = {st.session_state.business_id}
@@ -229,41 +261,7 @@ def main():
         with col2:
             st.write("### Reviews")
             if st.session_state.selected_cluster_id:
-            #     # Display the selected cluster's summary and number of reviews
-            #     selected_cluster = sorted_df[sorted_df['CLUSTER_ID']
-            #                                  == st.session_state.selected_cluster_id]
-            #     sentiment = '🤔'
-            #     #sentiment = f"{selected_cluster['Sentiment'].iloc[0]}"
-            # #     display_title = f" {selected_cluster['Simplified_Title'].iloc[0]}"
-
-            # #    # display_title = sentiment_icon(sentiment) + f" {selected_cluster['Simplified_Title'].iloc[0]}"
-            # #     st.write(f'#### {display_title}')
-            #     st.write(
-            #         str(selected_cluster['NUM_REVIEWS'].iloc[0]) + " Reviews")
-
-            #     st.caption(selected_cluster['CLUSTER_SUMMARY'].iloc[0])
-            #     st.divider()
-
-                # Filter reviews based on selected cluster ID and display them
-                filtered_reviews = cluster_df[cluster_df['CLUSTER_ID'] == st.session_state.selected_cluster_id]   
-                if not filtered_reviews.empty:
-                    for _, row in filtered_reviews.iterrows():
-                        review(
-                            publisher_id=row['PUBLISHER_ID'],
-                            rating=row['RATING'],
-                            title=row['TITLE'],
-                            author=row['AUTHOR_NAME'],
-                            content=row['CONTENT'],
-                            content_segment=row['REVIEW_SEGMENT'],
-                            # entity_name = 'Kimberly Ann Arsi, DO',
-                            date=str(row['PUBLISHER_TIMESTAMP'])[0:10]
-                        )
-                        # st.write(
-                        #     f"**{row['REVIEW_AUTHOR']}** on **{row['REVIEW_SITE']}** ({row['REVIEW_DATE']}) - Rating: {row['RATING']}")
-                        # st.write(row['REVIEW_CONTENT'])
-                        # st.write("---")
-                else:
-                    st.write("Select a Theme to see reviews")
+                display_reviews_for_cluster(cluster_df, st.session_state.selected_cluster_id)
 
 
 if __name__ == '__main__':
